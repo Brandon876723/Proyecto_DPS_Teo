@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
-import Table from "../components/Table";
 
 function Libros() {
   const [libros, setLibros] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [editoriales, setEditoriales] = useState([]);
+
   const [form, setForm] = useState({
     titulo: "",
     stock: "",
@@ -11,96 +13,90 @@ function Libros() {
     id_editorial: ""
   });
 
-  const getLibros = async () => {
-    try {
-      const res = await API.get("/libros");
-      setLibros(res.data);
-    } catch (error) {
-      console.error(error);
-    }
+  // 🔄 Cargar datos
+  const getData = async () => {
+    const librosRes = await API.get("/libros");
+    const catRes = await API.get("/libros/categorias");
+    const editRes = await API.get("/libros/editoriales");
+
+    setLibros(librosRes.data);
+    setCategorias(catRes.data);
+    setEditoriales(editRes.data);
   };
 
   useEffect(() => {
-    getLibros();
+    getData();
   }, []);
 
+  // 📝 Formulario
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    await API.post("/libros", form);
+    alert("Libro agregado");
+    setForm({ titulo: "", stock: "", id_categoria: "", id_editorial: "" });
+    getData();
+  };
 
-    try {
-      await API.post("/libros", form);
-      alert("Libro agregado");
-
-      setForm({
-        titulo: "",
-        stock: "",
-        id_categoria: "",
-        id_editorial: ""
-      });
-
-      getLibros();
-    } catch (error) {
-      console.error(error);
-    }
+  const deleteLibro = async (id) => {
+    await API.delete(/libros/`${id}`);
+    getData();
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Libros</h1>
+    <div style={{ padding: "20px", fontFamily: "Arial" }}>
+      <h1>📚 Gestión de Libros</h1>
 
-      {/* FORMULARIO */}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="titulo"
-          placeholder="Título"
-          value={form.titulo}
-          onChange={handleChange}
-          required
-        />
+      {/* FORM */}
+      <form style={{ marginBottom: "20px" }} onSubmit={handleSubmit}>
+        <input name="titulo" placeholder="Título" onChange={handleChange} required />
+        <input name="stock" type="number" placeholder="Stock" onChange={handleChange} required />
 
-        <input
-          type="number"
-          name="stock"
-          placeholder="Stock"
-          value={form.stock}
-          onChange={handleChange}
-          required
-        />
+        {/* SELECT CATEGORIA */}
+        <select name="id_categoria" onChange={handleChange} required>
+          <option value="">Categoría</option>
+          {categorias.map(c => (
+            <option key={c.id} value={c.id}>{c.nombre}</option>
+          ))}
+        </select>
 
-        <input
-          type="number"
-          name="id_categoria"
-          placeholder="ID Categoría"
-          value={form.id_categoria}
-          onChange={handleChange}
-          required
-        />
+        {/* SELECT EDITORIAL */}
+        <select name="id_editorial" onChange={handleChange} required>
+          <option value="">Editorial</option>
+          {editoriales.map(e => (
+            <option key={e.id} value={e.id}>{e.nombre}</option>
+          ))}
+        </select>
 
-        <input
-          type="number"
-          name="id_editorial"
-          placeholder="ID Editorial"
-          value={form.id_editorial}
-          onChange={handleChange}
-          required
-        />
-
-        <button type="submit">Guardar</button>
+        <button>Guardar</button>
       </form>
 
       {/* TABLA */}
-      <Table
-        data={libros}
-        columns={["id", "titulo", "stock", "id_categoria", "id_editorial"]}
-      />
+      <table border="1" width="100%">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {libros.map(l => (
+            <tr key={l.id}>
+              <td>{l.id}</td>
+              <td>{l.titulo}</td>
+              <td>{l.stock}</td>
+              <td>
+                <button onClick={() => deleteLibro(l.id)}>❌</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
